@@ -14,13 +14,17 @@ numpy==1.24.2
 
 1. Download this repository to local.
 
-2. Execute the *train.py* for training.
+2. Download *pytorch_model.bin* from [https://huggingface.co/google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased/tree/main), and add it to *code/bert-base-uncased* folder.
 
-3. Execute the *train.py* for testing.
+3. Add *code/fintune_models* folder.
+
+4. Execute the *train.py* for training.
+
+5. Execute the *train.py* for testing.
 
 ## Tips
 
-* **bert-base-uncased**: google-bert/bert-base-uncased · Hugging Face.
+* **bert-base-uncased**: [google-bert/bert-base-uncased · Hugging Face.](https://huggingface.co/google-bert/bert-base-uncased)
 
 * You can change model structure by modifying *model.py*.
 
