@@ -30,5 +30,5 @@ numpy==1.24.2
 
 * There may be some warnings during the code execution, which you can temporarily ignore.
 
-* If there is any problem with the code, you can contact me through zhaomunan2002@gmail.com.
+* If there is any problem with the code, you can contact me through 1500519790@qq.com.
 
