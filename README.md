@@ -18,7 +18,7 @@ numpy==1.24.2
 
 3. Add **code/fintune_models** folder.
 
-4. Add multi-label text classification dataset to data folder. 
+4. Add multi-label text classification dataset to **data** folder. 
 
 5. Run the **train.py** for training.
 
