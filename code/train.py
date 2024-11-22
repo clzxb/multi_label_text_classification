@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 from model import BertClass
 from get_data import get_DataLoader
+import numpy as np
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -12,12 +13,28 @@ def calculate_accuracy(preds, targets):
     n_correct = (preds == targets).all(dim=1).sum().item()
     return n_correct
 
+def calculate_precision(preds, targets):
+    count = 0
+    for i in range(targets.shape[0]):
+        if sum(preds[i]) == 0:
+            continue
+        count += sum(np.logical_and(targets[i], preds[i])) / sum(preds[i])
+    return count / targets.shape[0]
+
+def calculate_recall(preds, targets):
+    count = 0
+    for i in range(targets.shape[0]):
+        if sum(targets[i]) == 0:
+            continue
+        count += sum(np.logical_and(targets[i], preds[i])) / sum(targets[i])
+    return count / targets.shape[0]
+
 def calculate_big_idx(outputs):
     new_outputs = []
     correct_threshold = 0.5
     for output in outputs:
         new_output = []
-        for i, item in enumerate(output):
+        for item in output:
             if item > correct_threshold:
                 new_output.append(1)
             else:
@@ -30,7 +47,9 @@ def train(epoch, training_loader):
     n_correct = 0
     nb_tr_steps = 0
     nb_tr_examples = 0
-    
+    precision = 0
+    recall = 0
+
     model.train()
     for _, data in tqdm(enumerate(training_loader, 0)):
         ids = data['ids'].to(device, dtype=torch.long)
@@ -44,25 +63,32 @@ def train(epoch, training_loader):
         
         big_idx = calculate_big_idx(outputs)
         n_correct += calculate_accuracy(big_idx.to(device), targets)
-        
+        precision += calculate_precision(big_idx.cpu(), targets.cpu())
+        recall += calculate_recall(big_idx.cpu(), targets.cpu())
+
         nb_tr_steps += 1
         nb_tr_examples += targets.size(0)
 
         if _ % 100 == 0:
             loss_step = tr_loss / nb_tr_steps
             accu_step = (n_correct * 100) / nb_tr_examples
-            print(f"Training Loss per 500 steps: {loss_step}")
-            print(f"Training Accuracy per 500 steps: {accu_step}")
+            print(f"Training Loss per 100 steps: {loss_step}")
+            print(f"Training Accuracy per 100 steps: {accu_step}")
+            print(f"Training Precision per 100 steps: {precision * 100 / _}")
+            print(f"Training Recall per 100 steps: {recall * 100 / _}")
+
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-    print(f'The Total Accuracy for Epoch {epoch}: {(n_correct * 100) / nb_tr_examples}')
+    print(f'The Total Accuracy for Epoch {epoch + 1}: {(n_correct * 100) / nb_tr_examples}')
     epoch_loss = tr_loss / nb_tr_steps
     epoch_accu = (n_correct * 100) / nb_tr_examples
     print(f"Training Loss Epoch: {epoch_loss}")
     print(f"Training Accuracy Epoch: {epoch_accu}")
+    print(f"Training Precision Epoch: {precision * 100 / _}")
+    print(f"Training Recall Epoch: {recall * 100 / _}")
     return
 
 
@@ -73,6 +99,8 @@ def valid(model, val_loader):
     tr_loss = 0
     nb_tr_steps = 0
     nb_tr_examples = 0
+    precision = 0
+    recall = 0
 
     with torch.no_grad():
         for _, data in tqdm(enumerate(val_loader, 0)):
@@ -87,6 +115,8 @@ def valid(model, val_loader):
 
             big_idx = calculate_big_idx(outputs)
             n_correct += calculate_accuracy(big_idx.to(device), targets)
+            precision += calculate_precision(big_idx.cpu(), targets.cpu())
+            recall += calculate_recall(big_idx.cpu(), targets.cpu())
 
             nb_tr_steps += 1
             nb_tr_examples += targets.size(0)
@@ -94,16 +124,20 @@ def valid(model, val_loader):
             if _ % 5000 == 0:
                 loss_step = tr_loss / nb_tr_steps
                 accu_step = (n_correct * 100) / nb_tr_examples
-                print(f"Validation Loss per 100 steps: {loss_step}")
-                print(f"Validation Accuracy per 100 steps: {accu_step}")
+                print(f"Validation Loss per 5000 steps: {loss_step}")
+                print(f"Validation Accuracy per 5000 steps: {accu_step}")
+                print(f"Validation Precision per 5000 steps: {precision * 100 / _}")
+                print(f"Validation Recall per 5000 steps: {recall * 100 / _}")
    
     epoch_loss = tr_loss / nb_tr_steps
     epoch_accu = (n_correct * 100) / nb_tr_examples
 
     print(f"Validation Loss Epoch: {epoch_loss}")
     print(f"Validation Accuracy Epoch: {epoch_accu}")
+    print(f"Validation Precision Epoch: {precision * 100 / _}")
+    print(f"Validation Recall Epoch: {recall * 100 / _}")
 
-    return epoch_accu
+    return epoch_accu, precision * 100 / _, recall * 100 / _
 
 
 if __name__ == '__main__':
@@ -117,14 +151,20 @@ if __name__ == '__main__':
     EPOCHS = 10
 
     acc = 0
+    pre = 0
+    rec = 0
     print("Training start.")
     for epoch in range(EPOCHS):
         print(f"EPOCH {epoch + 1}")
         train(epoch, train_loader)
-        acc_current = valid(model, val_loader)
+        acc_current, pre_current, rec_current= valid(model, val_loader)
         if acc_current > acc:
             acc = acc_current
+            pre = pre_current
+            rec = rec_current
             torch.save(model, model_dir)
             print("Save successfully.")
 
     print(f"Best Validation Accuracy: {acc}")
+    print(f"Best Validation Precision: {pre}")
+    print(f"Best Validation Recall: {rec}")

@@ -4,6 +4,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 from train import calculate_big_idx
 from get_data import idx2label
+import re
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -99,5 +100,8 @@ if __name__ == '__main__':
 
     with open('data/test_real_result.txt', 'w', encoding='utf-8') as file:
             for content in real_result:
+                content = ','.join(content)
+                if content == '':
+                    content = 'No_Mentioned'
                 file.write("%s\n" % content)
     print('Save successfully.')
